@@ -291,7 +291,7 @@ function splitLong(list){
   const out = [];
   for (const c of list){
     const parts = c.text.match(/[^.!?…]+(?:[.!?…]+["')\]]*|$)/g)?.map(x => x.trim()).filter(x => /[\p{L}\p{N}]/u.test(x)) || [c.text];
-    if (c.end - c.start <= 6 || parts.length < 2){ out.push(c); continue; }
+    if (c.end - c.start <= 6 || parts.length < 2){ out.push({ ...c, bStart: c.start, bEnd: c.end }); continue; }
     // juntar oraciones muy cortas con la siguiente
     const groups = [];
     for (const p of parts){
@@ -303,7 +303,7 @@ function splitLong(list){
     let t = c.start;
     for (const g of groups){
       const d = (c.end - c.start) * g.length / total;
-      out.push({ start: t, end: t + d, text: g });
+      out.push({ start: t, end: t + d, text: g, bStart: c.start, bEnd: c.end });   // bStart/bEnd = bloque real de YouTube
       t += d;
     }
   }
@@ -383,7 +383,9 @@ function finishLine(){
   pausedByLine = false;
   setTimeout(() => {
     idx++; buildLine();
-    if (wasPaused) P.play();
+    // Solo seguimos reproduciendo si la próxima frase todavía no sonó
+    if (wasPaused && idx < cues.length && P.time() < cues[idx].bEnd) P.play();
+    else if (wasPaused && idx < cues.length){ pausedByLine = true; render(); }
   }, 450);
 }
 function hint(){
@@ -406,9 +408,13 @@ function goTo(i){
 function replay(){
   if (!cues.length || idx >= cues.length) return;
   const c = cues[idx];
-  const start = Math.max(0, Math.min(c.start - 0.2, c.end - S.win));
+  // Margen de 1 s antes y después (los tiempos dentro de un bloque son estimados)
+  const end = Math.min(c.bEnd, c.end + 1) + 0.3;
+  let start = Math.max(c.bStart - 0.3, c.start - 1);
+  if (end - start < S.win) start = end - S.win;
+  start = Math.max(0, start);
   pausedByLine = false;
-  stopAt = st && st.done ? null : c.end + 0.3;
+  stopAt = st && st.done ? null : end;
   P.seek(start); P.play();
   render();
   typer.focus();
@@ -431,7 +437,8 @@ setInterval(() => {
 
   if (stopAt !== null && t >= stopAt){ P.pause(); stopAt = null; pausedByLine = true; render(); return; }
   if (S.autoPause){
-    if (!st.done && t >= cues[idx].end + 0.25 && stopAt === null){ P.pause(); pausedByLine = true; render(); }
+    // Pausa recién al final del bloque real, así siempre se escucha la frase completa
+    if (!st.done && t >= cues[idx].bEnd + 0.3 && stopAt === null){ P.pause(); pausedByLine = true; render(); }
   } else {
     // Sin pausa: la frase activa sigue al video
     let j = idx;
@@ -499,6 +506,7 @@ async function start(resume){
   if (!id && !pendingFile) return setupMsg('Pegá un link de YouTube o elegí un archivo de video.', true);
 
   cues = parsed;
+  cues.forEach(c => { if (c.bStart === undefined){ c.bStart = c.start; c.bEnd = c.end; } });
   idx = resume ? Math.min(store.get('idx', 0), cues.length - 1) : 0;
   keys = good = wordsDone = activeMs = lastKey = 0;
   pausedByLine = false; stopAt = null;
