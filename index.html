@@ -248,7 +248,10 @@ function toSec(t){
   const p = t.split(':').map(Number);
   return p.length === 3 ? p[0]*3600 + p[1]*60 + p[2] : p[0]*60 + p[1];
 }
-const cleanText = t => t.replace(/<[^>]+>/g,'').replace(/\{[^}]+\}/g,'').replace(/\[[^\]]*\]/g,'').replace(/♪/g,'').replace(/\s+/g,' ').trim();
+const cleanText = t => t
+  .replace(/<[^>]+>/g,'').replace(/\{[^}]+\}/g,'').replace(/\[[^\]]*\]/g,'').replace(/\*[^*]*\*/g,'').replace(/\([^)]*\)/g,'').replace(/♪/g,'')
+  .replace(/(^|[\s.!?…,"])(?:[A-Z][\w'’]*(?:\s[A-Z][\w'’]*)?|>>)\s?:\s/g, '$1')   // "Michael: ", "Jim Halpert: "
+  .replace(/\s+/g,' ').trim();
 function parseSrt(text){
   const out = [];
   for (const b of text.replace(/\r/g,'').split(/\n\s*\n/)){
@@ -268,18 +271,43 @@ function parseSrt(text){
 }
 function parsePlain(text){
   const out = [];
-  const re = /^(\d{1,2}:\d{2}(?::\d{2})?)\s*(.*)$/;
-  const noise = /^\d+\s*(seconds?|minutes?|hours?|segundos?|minutos?|horas?)(,?\s*(y\s*|and\s*)?\d+\s*(seconds?|segundos?))?$/i;
+  const re = /^(\d{1,2}:\d{2}(?::\d{2})?)(.*)$/;
+  // YouTube pega el tiempo "leído": "0 segundos", "1 minuto y 8 segundos", "2 minutes, 5 seconds"
+  const spoken = /^\s*\d+\s*(?:horas?|hours?|minutos?|minutes?|segundos?|seconds?)(?:,?\s*(?:y|and)?\s*\d+\s*(?:minutos?|minutes?|segundos?|seconds?))*/i;
+  const chapter = /^(cap[íi]tulo|chapter)\s*\d+/i;
   for (let l of text.replace(/\r/g,'').split('\n')){
     l = l.trim();
-    if (!l || noise.test(l)) continue;
+    if (!l || chapter.test(l) || /^\d+\s*(segundos?|seconds?|minutos?|minutes?)/i.test(l) && !re.test(l)) continue;
     const m = l.match(re);
-    if (m) out.push({ start: toSec(m[1]), text: m[2] });
+    if (m) out.push({ start: toSec(m[1]), text: m[2].replace(spoken, '') });
     else if (out.length) out[out.length-1].text += ' ' + l;
   }
   const res = out.map(c => ({ ...c, text: cleanText(c.text) })).filter(c => /[\p{L}\p{N}]/u.test(c.text));
-  res.forEach((c, i) => c.end = res[i+1] ? Math.min(res[i+1].start, c.start + 12) : c.start + 5);
-  return res;
+  res.forEach((c, i) => c.end = res[i+1] ? Math.min(res[i+1].start, c.start + 15) : c.start + 6);
+  return splitLong(res);
+}
+// Las frases largas se dividen por oraciones, repartiendo el tiempo según su largo
+function splitLong(list){
+  const out = [];
+  for (const c of list){
+    const parts = c.text.match(/[^.!?…]+(?:[.!?…]+["')\]]*|$)/g)?.map(x => x.trim()).filter(x => /[\p{L}\p{N}]/u.test(x)) || [c.text];
+    if (c.end - c.start <= 6 || parts.length < 2){ out.push(c); continue; }
+    // juntar oraciones muy cortas con la siguiente
+    const groups = [];
+    for (const p of parts){
+      const g = groups[groups.length-1];
+      if (g && g.split(/\s+/).length < 3) groups[groups.length-1] = g + ' ' + p; else groups.push(p);
+    }
+    if (groups.length > 1 && groups[groups.length-1].split(/\s+/).length < 3) { const last = groups.pop(); groups[groups.length-1] += ' ' + last; }
+    const total = groups.reduce((n, g) => n + g.length, 0);
+    let t = c.start;
+    for (const g of groups){
+      const d = (c.end - c.start) * g.length / total;
+      out.push({ start: t, end: t + d, text: g });
+      t += d;
+    }
+  }
+  return out;
 }
 const parseAny = t => t.includes('-->') ? parseSrt(t) : parsePlain(t);
 
