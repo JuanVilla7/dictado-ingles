@@ -168,6 +168,7 @@
 <script>
 const $ = s => document.querySelector(s);
 const video = $('#video'), lineEl = $('#line'), typer = $('#typer');
+video.addEventListener('play', () => { if (pausedByLine) manualResume(); });
 
 /* ================= Guardado ================= */
 const store = {
@@ -223,6 +224,7 @@ async function openYoutube(id, startAt){
     playerVars: { rel:0, playsinline:1, disablekb:1, cc_load_policy:0, iv_load_policy:3, start: Math.floor(startAt || 0) },
     events: {
       onReady: () => { ytReady = true; P.rate(S.rate); },
+      onStateChange: e => { if (e.data === 1 && pausedByLine) manualResume(); },   // play tocado sobre el video
       onError: e => status(e.data === 101 || e.data === 150
         ? '⚠️ El dueño de este video no permite reproducirlo fuera de YouTube. Probá con otro.'
         : '⚠️ YouTube no pudo reproducir el video (error ' + e.data + ').', 'err')
@@ -313,7 +315,7 @@ const parseAny = t => t.includes('-->') ? parseSrt(t) : parsePlain(t);
 
 /* ================= Estado de la práctica ================= */
 let cues = [], idx = 0, letters = [], st = null;
-let stopAt = null, pausedByLine = false;
+let stopAt = null, pausedByLine = false, allowUntil = 0;
 let keys = 0, good = 0, wordsDone = 0, activeMs = 0, lastKey = 0;
 const lineState = i => (cues[i].st ||= { pos:0, marks:[], miss:0, done:false });
 
@@ -399,7 +401,7 @@ function skip(){
 function goTo(i){
   if (!cues.length) return;
   idx = Math.max(0, Math.min(cues.length - 1, i));
-  pausedByLine = false; stopAt = null;
+  pausedByLine = false; stopAt = null; allowUntil = 0;
   buildLine();
   P.seek(Math.max(0, cues[idx].start - 0.2)); P.play();
   typer.focus();
@@ -419,8 +421,16 @@ function replay(){
   render();
   typer.focus();
 }
+// Si das play a mano, el video sigue hasta el final del próximo bloque sin volver a frenarse
+function manualResume(){
+  const t = P.time();
+  const nxt = cues.find(c => c.bEnd > t + 0.5);
+  allowUntil = nxt ? nxt.bEnd : Infinity;
+  pausedByLine = false; stopAt = null;
+  if (st) render();
+}
 function togglePlay(){
-  if (P.paused()){ pausedByLine = false; stopAt = null; P.play(); render(); }
+  if (P.paused()){ manualResume(); P.play(); }
   else P.pause();
 }
 
@@ -438,7 +448,7 @@ setInterval(() => {
   if (stopAt !== null && t >= stopAt){ P.pause(); stopAt = null; pausedByLine = true; render(); return; }
   if (S.autoPause){
     // Pausa recién al final del bloque real, así siempre se escucha la frase completa
-    if (!st.done && t >= cues[idx].bEnd + 0.3 && stopAt === null){ P.pause(); pausedByLine = true; render(); }
+    if (!st.done && t >= Math.max(cues[idx].bEnd, allowUntil) + 0.8 && stopAt === null){ P.pause(); pausedByLine = true; render(); }
   } else {
     // Sin pausa: la frase activa sigue al video
     let j = idx;
