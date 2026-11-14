@@ -79,6 +79,26 @@
   .keys{text-align:center;margin-top:12px;font-size:12px;color:var(--soft)}
   kbd{font-family:'JetBrains Mono',monospace;font-size:11px;background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;color:var(--muted)}
   .end{text-align:center;padding:30px 0;font-size:18px}
+  /* Biblioteca */
+  .libhead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .libhead h2{margin:0;font-size:17px}
+  .chips{display:flex;gap:6px}
+  .chips button{border-radius:20px;padding:5px 12px;font-size:13px}
+  .chips button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
+  .vcard{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;cursor:pointer;text-align:left;padding:0;transition:transform .12s, box-shadow .12s}
+  .vcard:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(15,23,42,.1);border-color:var(--accent)}
+  .vthumb{position:relative;aspect-ratio:16/9;background:#e2e8f0 center/cover no-repeat}
+  .vdur{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.75);color:#fff;font-size:11px;padding:1px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace}
+  .vprog{position:absolute;left:0;bottom:0;height:3px;background:var(--accent)}
+  .vbody{padding:10px 12px 12px}
+  .vshow{font-size:11px;color:var(--soft);text-transform:uppercase;letter-spacing:.06em}
+  .vtitle{font-weight:600;font-size:14px;line-height:1.3;margin:2px 0 6px}
+  .tags{display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)}
+  .lvl{background:var(--accent-soft);color:#1d4ed8;font-weight:600;font-size:11px;padding:1px 7px;border-radius:10px}
+  .credit{font-size:12px;color:var(--soft);margin-top:12px}
+  details.own{margin-top:22px;border-top:1px solid var(--line);padding-top:16px}
+  details.own summary{cursor:pointer;font-weight:600;font-size:15px;margin-bottom:12px}
   @media (max-width:600px){ .line{font-size:22px} .stats{gap:16px} }
 </style>
 </head>
@@ -88,12 +108,25 @@
     <h1>🎧 Dictado en inglés</h1>
     <div class="row">
       <button id="btnInstall" class="primary hidden">⬇ Instalar app</button>
-      <button id="btnSetup" class="hidden">⚙ Cambiar video</button>
+      <button id="btnSetup" class="hidden">📚 Biblioteca</button>
     </div>
   </div>
 
   <!-- ===== Configuración ===== -->
   <section id="setup" class="card">
+    <div class="libhead">
+      <h2>📚 Elegí un video y empezá</h2>
+      <div class="chips" id="chips">
+        <button data-c="" class="on">Todos</button>
+        <button data-c="pelicula">🎬 Películas</button>
+        <button data-c="ciencia">🚀 Ciencia</button>
+      </div>
+    </div>
+    <div id="grid" class="grid"><p class="muted">Cargando videos…</p></div>
+    <p class="credit">Escenas de <i>Charade</i> (1963) y videos de NASA, ambos de dominio público.</p>
+
+    <details class="own" id="ownBox">
+    <summary>➕ Usar mi propio video de YouTube</summary>
     <div class="step">
       <h2>1 · Video</h2>
       <div class="row">
@@ -115,6 +148,7 @@
       <button id="btnStart" class="primary">▶ Empezar</button>
       <button id="btnResume" class="hidden">↩ Seguir donde quedé</button>
     </div>
+    </details>
     <div id="setupMsg" class="msg"></div>
   </section>
 
@@ -132,6 +166,7 @@
         <div class="stat"><small>Precisión</small><b id="stAcc">100%</b></div>
       </div>
       <div class="ctrls">
+        <button id="btnRestart" title="Volver a la primera frase">⏮</button>
         <button id="btnPrev" title="Frase anterior">‹</button>
         <button id="btnPlay" title="Play / pausa (Esc)">▶</button>
         <button id="btnReplay" title="Repetir (Tab)">↺ <span id="winLbl">5</span>s</button>
@@ -352,6 +387,7 @@ function buildLine(){
   render();
   updateStats();
   store.set('idx', idx);
+  if (libId) store.set('prog-' + libId, idx);
 }
 function render(){
   letters.forEach((s, i) => {
@@ -488,6 +524,7 @@ document.addEventListener('keydown', e => {
 
 /* ================= Controles ================= */
 $('#btnPrev').onclick = () => goTo(idx - 1);
+$('#btnRestart').onclick = () => goTo(0);
 $('#btnNext').onclick = () => goTo(idx + 1);
 $('#btnPlay').onclick = () => { togglePlay(); typer.focus(); };
 $('#btnReplay').onclick = replay;
@@ -525,6 +562,7 @@ async function start(resume){
   if (!id && !pendingFile) return setupMsg('Pegá un link de YouTube o elegí un archivo de video.', true);
 
   cues = parsed;
+  libId = null;
   cues.forEach(c => { if (c.bStart === undefined){ c.bStart = c.start; c.bEnd = c.end; } });
   idx = resume ? Math.min(store.get('idx', 0), cues.length - 1) : 0;
   keys = good = wordsDone = activeMs = lastKey = 0;
@@ -553,8 +591,54 @@ $('#btnSetup').onclick = () => {
   $('#player').classList.add('hidden');
   $('#setup').classList.remove('hidden');
   $('#btnSetup').classList.add('hidden');
-  if (cues.length && idx > 0) $('#btnResume').classList.remove('hidden');
+  if (!libId && cues.length && idx > 0) $('#btnResume').classList.remove('hidden');
+  renderLib();
 };
+
+/* ================= Biblioteca ================= */
+let libId = null, library = [], libCat = '';
+const fmtDur = s => Math.floor(s / 60) + ':' + String(Math.round(s % 60)).padStart(2, '0');
+function renderLib(){
+  const g = $('#grid');
+  if (!library.length){ g.innerHTML = '<p class="muted">No se pudo cargar la biblioteca. Revisá tu conexión.</p>'; return; }
+  g.innerHTML = '';
+  for (const v of library.filter(v => !libCat || v.cat === libCat)){
+    const done = store.get('prog-' + v.id, 0);
+    const b = document.createElement('button');
+    b.className = 'vcard';
+    b.innerHTML = `<div class="vthumb" style="background-image:url(https://i.ytimg.com/vi/${v.id}/mqdefault.jpg)">
+        <span class="vdur">${fmtDur(v.dur)}</span>${done ? `<span class="vprog" style="width:${Math.round(done / v.cues.length * 100)}%"></span>` : ''}</div>
+      <div class="vbody"><div class="vshow">${v.show}</div><div class="vtitle"></div>
+      <div class="tags"><span class="lvl">${v.level}</span><span>${v.cues.length} frases</span>${done ? `<span>· vas por la ${done + 1}</span>` : ''}</div></div>`;
+    b.querySelector('.vtitle').textContent = v.title;
+    b.onclick = () => startLib(v);
+    g.appendChild(b);
+  }
+}
+$('#chips').onclick = e => {
+  const c = e.target.dataset.c; if (c === undefined) return;
+  libCat = c;
+  document.querySelectorAll('#chips button').forEach(x => x.classList.toggle('on', x.dataset.c === c));
+  renderLib();
+};
+async function startLib(v){
+  cues = v.cues.map(([s, e, t]) => ({ start: s, end: e, text: t, bStart: s, bEnd: e }));
+  libId = v.id;
+  idx = Math.min(store.get('prog-' + v.id, 0), cues.length - 1);
+  keys = good = wordsDone = activeMs = lastKey = 0;
+  pausedByLine = false; stopAt = null; allowUntil = 0;
+  setupMsg('Cargando…');
+  try { await openYoutube(v.id, Math.max(0, cues[idx].start - 0.2)); }
+  catch { return setupMsg('⚠️ No se pudo cargar YouTube. Revisá tu conexión.', true); }
+  setupMsg('');
+  $('#setup').classList.add('hidden');
+  $('#player').classList.remove('hidden');
+  $('#btnSetup').classList.remove('hidden');
+  buildLine();
+  status(idx ? '▶ Seguís desde la frase ' + (idx + 1) + ' · Esc para play' : '▶ Dale play (Esc) y escribí lo que escuchás');
+  typer.focus();
+}
+fetch('videos.json').then(r => r.json()).then(d => { library = d; renderLib(); }).catch(() => renderLib());
 
 /* ================= App instalable ================= */
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
