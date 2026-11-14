@@ -79,6 +79,23 @@
   .keys{text-align:center;margin-top:12px;font-size:12px;color:var(--soft)}
   kbd{font-family:'JetBrains Mono',monospace;font-size:11px;background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;color:var(--muted)}
   .end{text-align:center;padding:30px 0;font-size:18px}
+  /* Traducción */
+  .word.tap{cursor:pointer;border-radius:6px;transition:background .12s}
+  .word.tap:hover{background:#e0e7ff}
+  .prev{text-align:center;color:var(--muted);font-size:17px;min-height:26px;margin-top:14px;line-height:1.7}
+  .prev .word{padding:1px 2px}
+  .prev .tbtn{border:none;background:none;padding:0 4px;font-size:15px;cursor:pointer;vertical-align:1px}
+  .prevtr{text-align:center;color:var(--soft);font-size:14px;font-style:italic;min-height:0}
+  .pop{position:absolute;z-index:50;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(15,23,42,.18);padding:12px 14px;width:min(330px,92vw);font:14px/1.45 Inter,system-ui,sans-serif;letter-spacing:0;text-align:left;color:var(--text)}
+  .pop .ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding-right:22px}
+  .pop .pw{font-weight:700;font-size:19px}
+  .pop .ipa{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:14px}
+  .pop .say{border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:14px}
+  .pop .x{position:absolute;top:8px;right:8px;border:none;background:none;font-size:15px;padding:2px 6px;color:var(--soft)}
+  .pop .tr{font-size:17px;margin:8px 0 2px;color:#1d4ed8;font-weight:600}
+  .pop .alt{color:var(--muted);font-size:13px}
+  .pop .alt b{color:var(--text);font-weight:600}
+  .pop .sent{border-top:1px solid var(--line);margin-top:10px;padding-top:8px;font-size:13px;color:var(--muted)}
   /* Biblioteca */
   .libhead{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px}
   .libhead h2{margin:0;font-size:17px}
@@ -176,6 +193,8 @@
     <div class="progress"><div id="prog"></div></div>
     <div class="time" id="timeLbl">00:00 / 00:00</div>
 
+    <div id="prevLine" class="prev"></div>
+    <div id="prevTr" class="prevtr"></div>
     <div id="line" class="line mode-gaps"></div>
     <div id="status" class="status"></div>
     <input id="typer" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Escribí aquí…">
@@ -209,6 +228,7 @@
   </section>
 </div>
 
+<div id="pop" class="pop hidden"></div>
 <script>
 const $ = s => document.querySelector(s);
 const video = $('#video'), lineEl = $('#line'), typer = $('#typer');
@@ -374,6 +394,7 @@ function buildLine(){
   for (const part of cues[idx].text.split(/\s+/)){
     if (!part) continue;
     const w = document.createElement('span'); w.className = 'word';
+    w.dataset.w = part.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
     let last = null;
     for (const ch of part){
       const s = document.createElement('span');
@@ -385,6 +406,8 @@ function buildLine(){
     lineEl.appendChild(w);
   }
   render();
+  renderPrev();
+  hidePop();
   updateStats();
   store.set('idx', idx);
   if (libId) store.set('prog-' + libId, idx);
@@ -393,6 +416,12 @@ function render(){
   letters.forEach((s, i) => {
     const m = st.marks[i];
     s.className = 'ch ' + (m || 'pending') + (i === st.pos && !st.done ? ' cur' : '');
+  });
+  // Se pueden tocar las palabras ya escritas (o todas en modo subtítulo completo)
+  lineEl.querySelectorAll('.word').forEach(w => {
+    const chs = [...w.querySelectorAll('.ch')];
+    const ready = S.mode === 'full' || (chs.length && chs.every(c => /\b(ok|rev)\b/.test(c.className)));
+    w.classList.toggle('tap', !!(ready && w.dataset.w));
   });
   if (st.done) status('✔ ¡Bien!', 'done');
   else if (pausedByLine) status('⏸ Escribí lo que escuchaste · Tab para repetir');
@@ -538,7 +567,7 @@ function applySettings(){
   $('#selRate').value = String(S.rate);
   $('#chkPause').checked = S.autoPause;
 }
-$('#selMode').onchange = e => { S.mode = e.target.value; saveSettings(); applySettings(); typer.focus(); };
+$('#selMode').onchange = e => { S.mode = e.target.value; saveSettings(); applySettings(); if (st && letters.length) render(); typer.focus(); };
 $('#selWin').onchange = e => { S.win = +e.target.value; saveSettings(); applySettings(); typer.focus(); };
 $('#selRate').onchange = e => { S.rate = +e.target.value; saveSettings(); P.rate(S.rate); typer.focus(); };
 $('#chkPause').onchange = e => { S.autoPause = e.target.checked; saveSettings(); typer.focus(); };
@@ -651,6 +680,78 @@ $('#btnInstall').onclick = async () => {
   await installEvt.userChoice.catch(() => {});
   installEvt = null; $('#btnInstall').classList.add('hidden');
 };
+
+/* ================= Traducción al tocar una palabra ================= */
+const trCache = new Map(), ipaCache = new Map();
+function translate(q){
+  if (!trCache.has(q)) trCache.set(q,
+    fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=es&hl=es&dt=t&dt=bd&q=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(j => ({ main: (j[0] || []).map(x => x[0]).join(''), dict: (j[1] || []).map(d => ({ pos: d[0], terms: (d[1] || []).slice(0, 4) })) }))
+      .catch(() => fetch('https://api.mymemory.translated.net/get?langpair=en|es&q=' + encodeURIComponent(q))
+        .then(r => r.json()).then(j => ({ main: (j.responseData?.translatedText || '').replace(/<[^>]+>/g, ''), dict: [] })))
+      .catch(() => ({ main: '', dict: [] })));
+  return trCache.get(q);
+}
+function phonetics(w){
+  if (!ipaCache.has(w)) ipaCache.set(w,
+    fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(w))
+      .then(r => r.ok ? r.json() : null)
+      .then(j => { if (!j) return null; const ph = j.flatMap(e => e.phonetics || []);
+        return { text: j[0].phonetic || ph.map(p => p.text).find(Boolean) || '',
+                 audio: ph.map(p => p.audio).find(a => a && /-us\.mp3$/.test(a)) || ph.map(p => p.audio).find(Boolean) || '' }; })
+      .catch(() => null));
+  return ipaCache.get(w);
+}
+function tts(w){ try { const u = new SpeechSynthesisUtterance(w); u.lang = 'en-US'; u.rate = 0.85; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch {} }
+function sayWord(w, audio){ if (audio) new Audio(audio).play().catch(() => tts(w)); else tts(w); }
+
+const pop = $('#pop');
+function hidePop(){ if (!pop.classList.contains('hidden')){ pop.classList.add('hidden'); pop.dataset.for = ''; } }
+function showPop(wordEl, sentence){
+  const raw = wordEl.dataset.w, key = raw.toLowerCase().replace(/[’]/g, "'");
+  if (!P.paused()){ P.pause(); }
+  pop.dataset.for = raw;
+  pop.innerHTML = '<button class="x" title="Cerrar">✕</button><div class="ph"><span class="pw"></span><span class="ipa"></span><button class="say" title="Escuchar">🔊</button></div><div class="tr">Traduciendo…</div><div class="alt"></div>' + (sentence ? '<div class="sent">Frase: <span class="st">…</span></div>' : '');
+  pop.querySelector('.pw').textContent = raw;
+  pop.classList.remove('hidden');
+  const r = wordEl.getBoundingClientRect();
+  pop.style.left = Math.max(8, Math.min(r.left + scrollX + r.width / 2 - pop.offsetWidth / 2, scrollX + innerWidth - pop.offsetWidth - 8)) + 'px';
+  pop.style.top = (r.bottom + scrollY + 8) + 'px';
+  let audio = '';
+  pop.querySelector('.say').onclick = e => { e.stopPropagation(); sayWord(raw, audio); };
+  pop.querySelector('.x').onclick = e => { e.stopPropagation(); hidePop(); typer.focus(); };
+  phonetics(key.replace(/'s$/, '')).then(d => { if (pop.dataset.for !== raw || !d) return; pop.querySelector('.ipa').textContent = d.text; audio = d.audio; });
+  translate(raw).then(t => {
+    if (pop.dataset.for !== raw) return;
+    pop.querySelector('.tr').textContent = t.main || 'Sin traducción';
+    const alt = pop.querySelector('.alt'); alt.innerHTML = '';
+    t.dict.slice(0, 2).forEach(d => { const div = document.createElement('div'); div.innerHTML = '<b></b> '; div.querySelector('b').textContent = d.pos + ':'; div.append(d.terms.join(', ')); alt.appendChild(div); });
+  });
+  if (sentence) translate(sentence).then(t => { if (pop.dataset.for === raw) pop.querySelector('.st').textContent = t.main; });
+}
+lineEl.addEventListener('click', e => { const w = e.target.closest('.word.tap'); if (w){ e.stopPropagation(); showPop(w, null); } });
+$('#prevLine').addEventListener('click', e => {
+  const w = e.target.closest('.word.tap'); if (!w) return;
+  e.stopPropagation(); showPop(w, cues[idx - 1] && cues[idx - 1].text);
+});
+document.addEventListener('click', e => { if (!pop.contains(e.target)) hidePop(); });
+
+// Frase anterior: chiquita, tocable y con botón para traducirla entera
+function renderPrev(){
+  const el = $('#prevLine'), tr = $('#prevTr'); el.innerHTML = ''; tr.textContent = '';
+  const c = idx > 0 && cues[idx - 1]; if (!c) return;
+  c.text.split(/\s+/).filter(Boolean).forEach((part, i) => {
+    if (i) el.append(' ');
+    const w = document.createElement('span'); w.className = 'word tap'; w.textContent = part;
+    w.dataset.w = part.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+    if (!w.dataset.w) w.className = 'word';
+    el.appendChild(w);
+  });
+  const b = document.createElement('button'); b.className = 'tbtn'; b.title = 'Traducir la frase'; b.textContent = '🌐';
+  b.onclick = e => { e.stopPropagation(); if (tr.textContent){ tr.textContent = ''; return; } tr.textContent = '…'; translate(c.text).then(t => tr.textContent = t.main); };
+  el.append(' ', b);
+}
 </script>
 </body>
 </html>
