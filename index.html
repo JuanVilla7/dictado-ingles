@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dictado en inglés</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3b82f6">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Dictado">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -80,7 +86,10 @@
 <div class="wrap">
   <div class="top">
     <h1>🎧 Dictado en inglés</h1>
-    <button id="btnSetup" class="hidden">⚙ Cambiar video</button>
+    <div class="row">
+      <button id="btnInstall" class="primary hidden">⬇ Instalar app</button>
+      <button id="btnSetup" class="hidden">⚙ Cambiar video</button>
+    </div>
   </div>
 
   <!-- ===== Configuración ===== -->
@@ -545,6 +554,18 @@ $('#btnSetup').onclick = () => {
   $('#setup').classList.remove('hidden');
   $('#btnSetup').classList.add('hidden');
   if (cues.length && idx > 0) $('#btnResume').classList.remove('hidden');
+};
+
+/* ================= App instalable ================= */
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('#btnInstall').classList.remove('hidden'); });
+window.addEventListener('appinstalled', () => { installEvt = null; $('#btnInstall').classList.add('hidden'); });
+$('#btnInstall').onclick = async () => {
+  if (!installEvt) return;
+  installEvt.prompt();
+  await installEvt.userChoice.catch(() => {});
+  installEvt = null; $('#btnInstall').classList.add('hidden');
 };
 </script>
 </body>
