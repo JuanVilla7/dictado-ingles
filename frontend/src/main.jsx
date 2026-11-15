@@ -14,6 +14,7 @@ import { FreeDictionaryPhonetics } from './infrastructure/translation/FreeDictio
 import { StaticLibraryRepository } from './infrastructure/library/StaticLibraryRepository.js';
 import { WebAudioSounds } from './infrastructure/audio/WebAudioSounds.js';
 import { BrowserSpeech } from './infrastructure/audio/BrowserSpeech.js';
+import { parseTranscript, youTubeIdFrom } from './infrastructure/transcripts/transcriptParser.js';
 
 // Casos de uso
 import { SettingsService } from './application/usecases/SettingsService.js';
@@ -43,6 +44,7 @@ const services = {
   store, translator, player, settings, sounds, stats, words, progress,
   phonetics: new FreeDictionaryPhonetics(),
   speech: new BrowserSpeech(),
+  transcripts: { parse: parseTranscript, youTubeId: youTubeIdFrom },
   library: new LibraryService(new StaticLibraryRepository()),
   practice: new PracticeSession({ player, stats, words, progress, settings, sounds }),
   games: new GameSession({ player, stats, sounds, store }),

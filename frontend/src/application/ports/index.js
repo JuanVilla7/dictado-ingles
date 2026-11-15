@@ -52,4 +52,10 @@
  * @property {(word: string, audioUrl?: string) => void} say
  */
 
+/**
+ * @typedef {Object} TranscriptReader
+ * @property {(text: string) => import('../domain/entities/Cue').createCue[]} parse  .srt/.vtt o texto copiado de YouTube
+ * @property {(url: string) => string|null} youTubeId
+ */
+
 export {};

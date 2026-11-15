@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useServices } from '../context/services.jsx';
 import { useObservable } from '../hooks/useObservable.js';
 import { VideoCard } from '../components/VideoCard.jsx';
-import { parseTranscript, youTubeIdFrom } from '../../infrastructure/transcripts/transcriptParser.js';
 
 const CATEGORIES = [['', 'Todos'], ['pelicula', '🎬 Películas'], ['ciencia', '🚀 Ciencia']];
 
@@ -55,7 +54,7 @@ export function HomePage({ library, onOpenVideo, onOpenOwn, onNavigate }) {
 
 /** Formulario para practicar con un video propio de YouTube (o un archivo) pegando su transcripción. */
 function OwnVideoForm({ onStart }) {
-  const { progress } = useServices();
+  const { progress, transcripts } = useServices();
   const saved = progress.getOwn();
   const [url, setUrl] = useState(saved.url);
   const [file, setFile] = useState(null);
@@ -63,9 +62,9 @@ function OwnVideoForm({ onStart }) {
   const [msg, setMsg] = useState({ text: '', err: false });
 
   const start = async (resume) => {
-    const cues = parseTranscript(text);
+    const cues = transcripts.parse(text);
     if (!cues.length) return setMsg({ text: 'Pegá la transcripción del video (con los tiempos) o cargá un .srt.', err: true });
-    const id = youTubeIdFrom(url);
+    const id = transcripts.youTubeId(url);
     if (!id && !file) return setMsg({ text: 'Pegá un link de YouTube o elegí un archivo de video.', err: true });
     setMsg({ text: 'Cargando…', err: false });
     progress.setOwn({ url: url.trim(), transcript: text });

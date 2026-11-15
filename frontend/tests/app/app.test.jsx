@@ -13,6 +13,7 @@ import { ReviewSession } from '../../src/application/usecases/ReviewSession.js';
 import { ServicesProvider } from '../../src/presentation/context/services.jsx';
 import { ToastProvider } from '../../src/presentation/context/toast.jsx';
 import { App } from '../../src/presentation/App.jsx';
+import { parseTranscript, youTubeIdFrom } from '../../src/infrastructure/transcripts/transcriptParser.js';
 
 const LIBRARY = [
   { id: 'vid1', show: 'NASA', title: 'What is a Black Hole?', cat: 'ciencia', level: 'B1', dur: 93,
@@ -27,7 +28,7 @@ function setup() {
   const settings = new SettingsService(store), stats = new StatsService(store);
   const words = new WordsService(store, fakeTranslator), progress = new ProgressService(store);
   const services = {
-    store, player, settings, stats, words, progress, translator: fakeTranslator, phonetics: fakePhonetics, speech: fakeSpeech, sounds: silentSounds,
+    store, player, settings, stats, words, progress, translator: fakeTranslator, phonetics: fakePhonetics, speech: fakeSpeech, sounds: silentSounds, transcripts: { parse: parseTranscript, youTubeId: youTubeIdFrom },
     library: new LibraryService({ getAll: async () => LIBRARY }),
     practice: new PracticeSession({ player, stats, words, progress, settings, sounds: silentSounds }),
     games: new GameSession({ player, stats, sounds: silentSounds, store }),
