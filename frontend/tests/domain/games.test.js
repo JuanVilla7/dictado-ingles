@@ -3,8 +3,14 @@ import { eligibleRounds, scrambledOrder, isCorrectOrder, resultMessage } from '.
 import { computeStreak, dayKey } from '../../src/domain/services/streak.js';
 
 describe('juegos', () => {
-  it('descarta frases muy cortas y las cortinas de NASA', () => {
-    const video = { cues: [{ text: 'Hi.' }, { text: 'We Asked a NASA Scientist.' }, { text: 'Space is really really big.' }] };
+  it('descarta frases muy cortas y las de pantalla', () => {
+    const video = { cues: [
+      { text: 'Hi.' },
+      { text: 'We Asked a NASA Scientist.', spoken: false },
+      { text: 'Space is really really big.' },
+      // Sin "NASA" en el texto: prueba que ya no depende de una regex sobre el texto
+      { text: 'A production of the space agency team.', spoken: false },
+    ] };
     expect(eligibleRounds([video], 'listen').map((r) => r.cue.text)).toEqual(['Space is really really big.']);
   });
 

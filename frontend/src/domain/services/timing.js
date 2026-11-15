@@ -1,3 +1,5 @@
+import { isSpoken } from './spoken.js';
+
 /**
  * Reglas de cuándo pausar y qué repetir durante el dictado.
  * Son funciones puras: reciben el tiempo actual y la frase, y deciden.
@@ -26,15 +28,21 @@ export function replayWindow(cue, minSeconds) {
   return { start: Math.max(0, start), end };
 }
 
-/** Si el usuario da play a mano, puede seguir hasta el final del próximo bloque. */
+/**
+ * Si el usuario da play a mano, puede seguir hasta el final del próximo bloque hablado.
+ * Las frases de pantalla no cuentan: si no, un play manual frenaría al final de un crédito.
+ */
 export function manualPlayLimit(cues, time) {
-  const next = cues.find((c) => c.bEnd > time + 0.5);
+  const next = cues.find((c) => isSpoken(c) && c.bEnd > time + 0.5);
   return next ? next.bEnd : Infinity;
 }
 
-/** Sin pausas automáticas: ¿qué frase está sonando ahora? (nunca retrocede) */
+/**
+ * Sin pausas automáticas: ¿qué frase hablada está sonando ahora? (nunca retrocede)
+ * Devuelve la última frase hablada con start <= time; nunca una de pantalla.
+ */
 export function cueIndexAt(cues, time, fromIndex) {
-  let j = fromIndex;
-  while (j + 1 < cues.length && time >= cues[j + 1].start) j++;
-  return j;
+  let found = fromIndex;
+  for (let j = fromIndex + 1; j < cues.length && time >= cues[j].start; j++) if (isSpoken(cues[j])) found = j;
+  return found;
 }

@@ -1,18 +1,18 @@
 import { normalizeSentence, shuffle, tokenize } from './text.js';
+import { isSpoken } from './spoken.js';
 
 export const ROUNDS_PER_GAME = 10;
 
-const IS_FILLER = /NASA 360|We Asked a NASA/i;
 const LIMITS = { listen: [4, 14], order: [4, 11] };
 
-/** Frases que sirven para un juego: ni muy cortas ni muy largas, sin cortinas/créditos. */
+/** Frases que sirven para un juego: ni muy cortas ni muy largas, y solo habladas (sin títulos ni créditos). */
 export function eligibleRounds(videos, type) {
   const [min, max] = LIMITS[type];
   const pool = [];
   for (const video of videos) {
     for (const cue of video.cues) {
       const n = tokenize(cue.text).length;
-      if (n >= min && n <= max && !IS_FILLER.test(cue.text)) pool.push({ video, cue, words: n });
+      if (n >= min && n <= max && isSpoken(cue)) pool.push({ video, cue, words: n });
     }
   }
   return pool;
