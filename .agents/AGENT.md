@@ -36,6 +36,7 @@ Detalle y ejemplos: `.agents/reference/architecture.md`.
 4. `VideoStage` se monta una sola vez (se oculta con CSS). Desmontarlo recarga el iframe de YouTube.
 5. Biblioteca (`frontend/public/videos.json`): solo contenido de dominio público o con licencia libre.
 6. No asumir: si un requisito es ambiguo, **preguntar antes** de planificar o implementar.
+7. Cuando aparezca un error, un truco o un concepto nuevo, anotarlo en `docs/APRENDIZAJES.md` (qué pasó → por qué → qué hago la próxima vez). El dueño estudia con ese archivo.
 
 ## Estilo
 - Código en inglés; textos de interfaz y comentarios en español. Comentarios que expliquen el *por qué*.
