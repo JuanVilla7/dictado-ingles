@@ -99,14 +99,14 @@ CLAUDE.md                 → importa .agents/AGENT.md (Claude Code lo carga sol
 ├── AGENT.md              reglas globales: stack, comandos, arquitectura, estilo (siempre cargado, corto)
 ├── PRD.md                producto: problema, funcionalidades, backlog
 ├── reference/            contexto bajo demanda: architecture, components, testing, content
-├── plans/                planes generados por /plan
+├── plans/                planes generados por /plan-feature
 └── stories/              historias generadas por /create-stories
-.claude/commands/         comandos reutilizables (/prime, /plan, /implement, …)
+.claude/commands/         comandos reutilizables (/prime, /plan-feature, /implement, …)
 ```
 
 **Loop PIV — Planificar, Implementar, Validar:**
 
-1. **Planificar:** `/prime` carga el contexto (reglas, PRD, estructura, git log) → `/plan <feature>` escribe un plan en `.agents/plans/` con estrategia de validación. El agente pregunta antes de asumir.
+1. **Planificar:** `/prime` carga el contexto (reglas, PRD, estructura, git log) → `/plan-feature <feature>` escribe un plan en `.agents/plans/` con estrategia de validación. El agente pregunta antes de asumir.
 2. **Implementar:** reset de contexto (`/clear`) → `/implement .agents/plans/<plan>.md`. El plan es todo lo que necesita.
 3. **Validar:** `/validate` (lint + tests + build) → `/review` → prueba manual.
 
@@ -116,7 +116,7 @@ CLAUDE.md                 → importa .agents/AGENT.md (Claude Code lo carga sol
 | `/prime`, `/prime-client`, `/prime-usecase`, `/prime-components` | cargar contexto general o enfocado |
 | `/create-prd`, `/prd-interactive` | definir o ampliar el producto |
 | `/create-stories` | pasar un ítem del backlog a historias de usuario |
-| `/plan`, `/implement` | planificar y ejecutar |
+| `/plan-feature`, `/implement` | planificar y ejecutar |
 | `/validate`, `/review`, `/security-review` | validar, revisar código y seguridad |
 | `/create-rules` | incorporar a AGENT.md lo aprendido de un error |
 

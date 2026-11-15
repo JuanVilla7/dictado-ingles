@@ -5,4 +5,4 @@ así sirven para cualquier agente:
 
 @.agents/AGENT.md
 
-Comandos disponibles: `.claude/commands/` (`/prime`, `/plan`, `/implement`, `/validate`, `/review`, …).
+Comandos disponibles: `.claude/commands/` (`/prime`, `/plan-feature`, `/implement`, `/validate`, `/review`, …).

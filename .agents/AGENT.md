@@ -43,7 +43,7 @@ Detalle y ejemplos: `.agents/reference/architecture.md`.
 - Commits frecuentes, en español e imperativo: "Agrega juego de pronunciación". El git log es la memoria del proyecto.
 
 ## Flujo de trabajo (loop PIV)
-`/prime` → `/plan <feature>` → (reset de contexto) → `/implement <plan>` → `/validate` → `/review`.
+`/prime` → `/plan-feature <feature>` → (reset de contexto) → `/implement <plan>` → `/validate` → `/review`.
 Los planes se guardan en `.agents/plans/`, el PRD en `.agents/PRD.md`, las historias en `.agents/stories/`.
 
 ## Contexto bajo demanda (leer solo si hace falta)
