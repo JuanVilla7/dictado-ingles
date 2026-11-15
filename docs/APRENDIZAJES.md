@@ -57,6 +57,21 @@ Cosas que aprendí trabajando en este proyecto. Cada entrada: **qué pasó → p
 - ESLint **hace cumplir** las capas: si el dominio importa React, `npm run lint` falla.
 - Ventaja: las reglas se testean sin navegador y cambiar una tecnología = cambiar un adaptador.
 
+## 2026-11-15 — Frases de pantalla (issue #1)
+
+### 1. Separar el índice que se guarda del número que se muestra
+- **Qué pasó:** los subtítulos de YouTube traían texto de pantalla (títulos, carteles, créditos) y la app pedía escribirlo, aunque nadie lo dice.
+- **Por qué:** los datos mezclaban "lo que se dice" con "lo que se ve", y el código usaba la posición en el array para dos cosas: guardar el progreso y mostrarlo ("Frase 3/27").
+- **Próxima vez:**
+  - Separar el **índice de almacenamiento** (estable, nunca cambia) del **número que se muestra** (se calcula, ej. contando solo las frases habladas).
+  - **Marcar** los datos (`[inicio, fin, texto, "screen"]`) en vez de borrarlos: así no se rompe el progreso que la gente ya tiene guardado en `localStorage`.
+  - Reemplazar los parches por texto (una regex como `IS_FILLER = /NASA 360|We Asked a NASA/`) por un **dato explícito**. La regex fallaba con cualquier crédito que no dijera "NASA".
+
+### 2. Un script que edita datos tiene que verificar antes de escribir
+- **Qué pasó:** el script que marcaba las frases en `videos.json` cortó con error: esperaba `"We Asked a NASA Scientist."` y en un video decía `"We asked a NASA scientist."` (solo cambiaban las mayúsculas).
+- **Por qué:** los subtítulos de cada video los escribió alguien distinto; el mismo texto no siempre está igual.
+- **Próxima vez:** el script valida **todo** primero y escribe el archivo **al final**, así un error no deja el archivo a medio cambiar. Comparar textos sin mayúsculas (`toLowerCase()`), y después revisar con `git diff --stat` que el cambio sea del tamaño esperado (acá, 1 sola línea).
+
 ---
 
 ## Pendiente
