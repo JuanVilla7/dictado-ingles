@@ -22,8 +22,10 @@ con repetición espaciada y dos juegos de escucha.
 cd frontend
 npm install
 npm run dev      # servidor local en http://localhost:5173/dictado-ingles/
+npm run lint     # ESLint + reglas de arquitectura
 npm test         # tests (Vitest)
 npm run build    # compila a frontend/dist
+npm run validate # las tres cosas juntas
 ```
 
 Cada push a `main` corre los tests, compila y publica en GitHub Pages (`.github/workflows/deploy.yml`).
@@ -82,6 +84,41 @@ frontend/
     ├── infrastructure/     parser de transcripciones
     └── app/                integración de la app con puertos falsos
 ```
+
+**Las reglas de capas están automatizadas:** `frontend/eslint.config.js` hace fallar el lint si, por ejemplo,
+el dominio importa React o la interfaz instancia infraestructura.
+
+## Desarrollo asistido por IA (capa de IA + loop PIV)
+
+El repo tiene dos capas: el código y la **capa de IA**, todo el contexto que le dice a un agente (Claude Code) cómo trabajar acá.
+Está versionada junto al código, así que mejora con commits como cualquier otra cosa.
+
+```
+CLAUDE.md                 → importa .agents/AGENT.md (Claude Code lo carga solo)
+.agents/
+├── AGENT.md              reglas globales: stack, comandos, arquitectura, estilo (siempre cargado, corto)
+├── PRD.md                producto: problema, funcionalidades, backlog
+├── reference/            contexto bajo demanda: architecture, components, testing, content
+├── plans/                planes generados por /plan
+└── stories/              historias generadas por /create-stories
+.claude/commands/         comandos reutilizables (/prime, /plan, /implement, …)
+```
+
+**Loop PIV — Planificar, Implementar, Validar:**
+
+1. **Planificar:** `/prime` carga el contexto (reglas, PRD, estructura, git log) → `/plan <feature>` escribe un plan en `.agents/plans/` con estrategia de validación. El agente pregunta antes de asumir.
+2. **Implementar:** reset de contexto (`/clear`) → `/implement .agents/plans/<plan>.md`. El plan es todo lo que necesita.
+3. **Validar:** `/validate` (lint + tests + build) → `/review` → prueba manual.
+
+| Comando | Para qué |
+|---|---|
+| `/install` | instalar dependencias y levantar el servidor |
+| `/prime`, `/prime-client`, `/prime-usecase`, `/prime-components` | cargar contexto general o enfocado |
+| `/create-prd`, `/prd-interactive` | definir o ampliar el producto |
+| `/create-stories` | pasar un ítem del backlog a historias de usuario |
+| `/plan`, `/implement` | planificar y ejecutar |
+| `/validate`, `/review`, `/security-review` | validar, revisar código y seguridad |
+| `/create-rules` | incorporar a AGENT.md lo aprendido de un error |
 
 ## Agregar un video a la biblioteca
 

@@ -1,34 +1,53 @@
-# CLAUDE.md — guía para trabajar en este repo con Claude Code
+# AGENT.md — Reglas globales del proyecto
+
+> Este archivo se carga en TODAS las sesiones. Mantenerlo corto: el detalle va en `.agents/reference/` (contexto bajo demanda).
 
 ## Proyecto
-App web para practicar dictado en inglés (React 18 + Vite, JavaScript, sin TypeScript). El front vive en `frontend/`.
+**Dictado en inglés**: app web para entrenar el oído en inglés escribiendo lo que se dice en videos.
+React 18 + Vite, JavaScript (sin TypeScript), Vitest, ESLint. Todo el front vive en `frontend/`.
 Se publica en GitHub Pages con `.github/workflows/deploy.yml` en cada push a `main`.
-El dueño del proyecto es estudiante de programación y prefiere explicaciones en **español rioplatense**.
+El dueño es estudiante de programación: explicar en **español rioplatense**, claro y sin dar nada por sabido.
 
 ## Comandos (desde `frontend/`)
-- `npm run dev` — servidor local
-- `npm test` — Vitest (dominio, parser e integración de la app)
-- `npm run build` — compila a `dist/`
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | servidor local en http://localhost:5173/dictado-ingles/ |
+| `npm run lint` | ESLint + reglas de arquitectura |
+| `npm test` | Vitest: dominio, parser e integración |
+| `npm run build` | compila a `dist/` |
+| `npm run validate` | lint + tests + build (correr SIEMPRE antes de terminar) |
 
-Antes de dar por terminado un cambio: correr `npm test` y `npm run build`.
+## Arquitectura: Clean Architecture
+Dependencias hacia adentro: `presentation → application → domain`. `infrastructure` implementa los puertos.
+**ESLint hace cumplir estas reglas** (`frontend/eslint.config.js`): si el lint falla por `no-restricted-imports`, la solución es mover el código a la capa correcta, nunca desactivar la regla.
 
-## Arquitectura: Clean Architecture (respetar SIEMPRE)
-Las dependencias apuntan hacia adentro: `presentation → application → domain`. `infrastructure` implementa los puertos de `application`.
+- `src/domain/` — reglas puras. Sin React, `window`, `document`, `fetch` ni `localStorage`.
+- `src/application/usecases/` — casos de uso. Solo dominio + puertos (`src/application/ports/index.js`). Dependencias por constructor. Extienden `Observable` y llaman `emit()`.
+- `src/infrastructure/` — adaptadores concretos de los puertos (`@implements`).
+- `src/presentation/` — React. Servicios con `useServices()`, se redibuja con `useObservable()`. Sin reglas de negocio.
+- `src/main.jsx` — raíz de composición: único lugar que instancia infraestructura.
 
-- `src/domain/` — reglas puras. **Prohibido** importar React, usar `window`, `document`, `fetch`, `localStorage` o cualquier cosa de otras capas.
-- `src/application/usecases/` — casos de uso. Solo usan el dominio y los **puertos** (`src/application/ports/index.js`). Reciben sus dependencias por constructor. Extienden `Observable` y llaman `emit()` cuando cambia su estado.
-- `src/infrastructure/` — adaptadores concretos (YouTube, traductores, localStorage, fetch). Cada clase implementa un puerto (anotar con `@implements`).
-- `src/presentation/` — React. Obtiene servicios con `useServices()` y se redibuja con `useObservable(servicio)`. No contiene reglas de negocio: si hay un `if` que decide algo del juego/dictado, va al dominio o al caso de uso.
-- `src/main.jsx` — raíz de composición: el único archivo que instancia infraestructura y la inyecta.
+Detalle y ejemplos: `.agents/reference/architecture.md`.
 
-### Reglas prácticas
-- Lógica nueva → primero en `domain/` con su test en `tests/domain/`.
-- Servicio externo nuevo → definir el puerto en `ports/index.js`, implementarlo en `infrastructure/`, conectarlo en `main.jsx`, y agregar un fake en `tests/app/fakes.js`.
-- No romper la compatibilidad de `localStorage`: las claves usan el prefijo `dictado-` (`settings`, `words`, `days`, `best`, `prog-<videoId>`, `url`, `transcript`, `idx`).
-- El componente `VideoStage` se monta una sola vez y se oculta con CSS: no desmontarlo (se recargaría el iframe de YouTube).
-- Biblioteca (`public/videos.json`): solo contenido de dominio público o con licencia libre.
+## Reglas que no se negocian
+1. Lógica nueva → primero en `domain/` con su test en `frontend/tests/domain/`.
+2. Servicio externo nuevo → puerto en `ports/index.js` + adaptador en `infrastructure/` + conexión en `main.jsx` + fake en `tests/app/fakes.js`.
+3. No romper `localStorage`: prefijo `dictado-` y claves `settings`, `words`, `days`, `best`, `prog-<videoId>`, `url`, `transcript`, `idx`.
+4. `VideoStage` se monta una sola vez (se oculta con CSS). Desmontarlo recarga el iframe de YouTube.
+5. Biblioteca (`frontend/public/videos.json`): solo contenido de dominio público o con licencia libre.
+6. No asumir: si un requisito es ambiguo, **preguntar antes** de planificar o implementar.
 
 ## Estilo
-- Nombres en inglés en el código; textos de la interfaz y comentarios en español.
-- Funciones chicas y puras cuando se pueda. Comentarios que expliquen el *por qué*.
-- Commits en español, en imperativo: "Agrega juego de pronunciación", "Corrige pausa al cambiar de video".
+- Código en inglés; textos de interfaz y comentarios en español. Comentarios que expliquen el *por qué*.
+- Funciones chicas; preferir funciones puras.
+- Commits frecuentes, en español e imperativo: "Agrega juego de pronunciación". El git log es la memoria del proyecto.
+
+## Flujo de trabajo (loop PIV)
+`/prime` → `/plan <feature>` → (reset de contexto) → `/implement <plan>` → `/validate` → `/review`.
+Los planes se guardan en `.agents/plans/`, el PRD en `.agents/PRD.md`, las historias en `.agents/stories/`.
+
+## Contexto bajo demanda (leer solo si hace falta)
+- `.agents/reference/architecture.md` — capas, flujo de datos, cómo agregar un caso de uso o un puerto
+- `.agents/reference/components.md` — patrones de React en este proyecto
+- `.agents/reference/testing.md` — cómo testear cada capa, fakes
+- `.agents/reference/content.md` — formato de `videos.json` y licencias
