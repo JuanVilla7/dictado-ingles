@@ -1,6 +1,7 @@
 import { Observable } from './Observable.js';
 import { DictationLine } from '../../domain/entities/DictationLine.js';
 import { shouldAutoPause, replayWindow, manualPlayLimit, cueIndexAt } from '../../domain/services/timing.js';
+import { nextSpokenIndex, prevSpokenIndex, spokenCount, screenCueAt, startTimeFor } from '../../domain/services/spoken.js';
 
 /**
  * Caso de uso principal: una sesión de dictado sobre un video.
@@ -30,7 +31,11 @@ export class PracticeSession extends Observable {
     this.lines = new Map();
     this.videoId = videoId;
     this.title = title;
-    this.index = Math.min(startIndex, cues.length - 1);
+    // Las frases de pantalla se saltean: si el progreso guardado apunta a una, seguimos en la próxima hablada.
+    // Si el video estaba terminado (no quedan habladas), vuelve a empezar.
+    let i = nextSpokenIndex(cues, startIndex);
+    if (i >= cues.length) i = nextSpokenIndex(cues, 0);
+    this.index = i;
     this.pausedByLine = false;
     this.stopAt = null;
     this.allowUntil = 0;
@@ -39,14 +44,23 @@ export class PracticeSession extends Observable {
     this.flash = 0;           // se incrementa al completar una frase (animación)
     this.finished = false;
     this.active = true;
-    this.status = this.index ? `▶ Seguís desde la frase ${this.index + 1} · Esc para play` : '▶ Dale play (Esc) y escribí lo que escuchás';
+    this.status = this.position > 1 ? `▶ Seguís desde la frase ${this.position} · Esc para play` : '▶ Dale play (Esc) y escribí lo que escuchás';
     this.#saveProgress();
     this.emit();
   }
   stop() { this.active = false; if (this.player.isReady()) this.player.pause(); }
 
   get cue() { return this.cues[this.index]; }
-  get previousCue() { return this.index > 0 ? this.cues[this.index - 1] : null; }
+  /** Última frase hablada antes de la actual (las de pantalla no se muestran como "frase anterior"). */
+  get previousCue() { const j = prevSpokenIndex(this.cues, this.index - 1); return j >= 0 ? this.cues[j] : null; }
+  /** Cantidad de frases habladas del video (las de pantalla no se cuentan). */
+  get spokenTotal() { return spokenCount(this.cues); }
+  /** Número de la frase actual para mostrar ("Frase 3/23"), contando solo las habladas. */
+  get position() { return Math.min(spokenCount(this.cues, this.index) + 1, this.spokenTotal); }
+  /** Segundo en el que cargar el video para la frase actual (0 si antes solo hay carteles). */
+  get startTime() { return startTimeFor(this.cues, this.index); }
+  /** Frase de pantalla que se ve en `time` (la interfaz la muestra en gris), o null. */
+  screenCueAt(time) { return screenCueAt(this.cues, time); }
   /** Frase actual como entidad del dominio (se crea una vez y conserva su estado si volvés atrás). */
   get line() {
     if (this.index >= this.cues.length) return null;
@@ -110,7 +124,7 @@ export class PracticeSession extends Observable {
     this.emit();
     setTimeout(() => {
       if (!this.active) return;
-      this.index++;
+      this.index = nextSpokenIndex(this.cues, this.index + 1);
       this.lastError = null;
       this.status = '';
       this.#saveProgress();
@@ -164,14 +178,23 @@ export class PracticeSession extends Observable {
   }
   goTo(i) {
     if (!this.cues.length) return;
-    this.index = Math.max(0, Math.min(this.cues.length - 1, i));
+    // La dirección decide hacia dónde saltear las frases de pantalla: ‹ busca hacia atrás, › hacia adelante.
+    let j;
+    if (i < this.index) {
+      j = prevSpokenIndex(this.cues, i);
+      if (j < 0) j = nextSpokenIndex(this.cues, 0);
+    } else {
+      j = nextSpokenIndex(this.cues, i);
+      if (j >= this.cues.length) j = prevSpokenIndex(this.cues, this.cues.length - 1);
+    }
+    this.index = j;
     this.finished = false;
     this.pausedByLine = false;
     this.stopAt = null;
     this.allowUntil = 0;
     this.status = '';
     this.#saveProgress();
-    this.player.seek(Math.max(0, this.cue.start - 0.2));
+    this.player.seek(this.startTime);
     this.player.play();
     this.emit();
   }

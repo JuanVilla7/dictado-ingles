@@ -31,7 +31,7 @@ export function GamesPage({ library, onReviewWords, pending, clearPending }) {
       <div className="subbar"><button className="ghost" onClick={() => setPick(null)}>← Juegos</button><h2>{INFO[pick].icon} {INFO[pick].title}</h2></div>
       <p className="muted" style={{ marginTop: 0 }}>Elegí de qué video salen las frases (10 rondas).</p>
       <div className="row" style={{ marginBottom: 14 }}><button className="primary" onClick={() => start(pick, library)}>🎲 Mezclar todos los videos</button></div>
-      <div className="grid">{library.map((v) => <VideoCard key={v.id} video={v} done={progress.get(v.id)} onClick={() => start(pick, [v])} />)}</div>
+      <div className="grid">{library.map((v) => <VideoCard key={v.id} video={v} summary={progress.summary(v)} onClick={() => start(pick, [v])} />)}</div>
     </section>
   );
 

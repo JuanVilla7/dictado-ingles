@@ -73,12 +73,14 @@ export function PracticePage({ onExit, onPlayGame, onReview }) {
 
   const line = practice.line;
   const prev = practice.previousCue;
+  // Texto que se ve en el video pero nadie dice: se muestra en gris, solo como información
+  const screenCue = practice.screenCueAt(clock.t);
 
   return (
     <section className="view">
       <div className="pbar">
         <div className="pstats">
-          <div className="pstat"><small>Frase</small><b>{Math.min(practice.index + 1, practice.cues.length)}/{practice.cues.length}</b></div>
+          <div className="pstat"><small>Frase</small><b>{practice.position}/{practice.spokenTotal}</b></div>
           <div className="pstat"><small>WPM</small><b>{practice.wpm}</b></div>
           <div className="pstat"><small>Precisión</small><b>{practice.accuracy}%</b></div>
         </div>
@@ -93,7 +95,9 @@ export function PracticePage({ onExit, onPlayGame, onReview }) {
       <div className="progress"><div style={{ width: clock.d ? `${(clock.t / clock.d) * 100}%` : 0 }} /></div>
       <div className="time">{fmt(clock.t)} / {fmt(clock.d)}</div>
 
-      {prev && <PreviousLine cue={prev} onWord={(e, w) => openWord(e, w, prev.text)} />}
+      {screenCue
+        ? <div className="screen-cue">📺 En pantalla: {screenCue.text}</div>
+        : prev && <PreviousLine cue={prev} onWord={(e, w) => openWord(e, w, prev.text)} />}
 
       <div className={`line mode-${s.mode} ${flash ? 'flash' : ''}`}>
         {line ? <LineView line={line} mode={s.mode} lastError={practice.lastError} onWord={(e, w) => openWord(e, w, null)} />

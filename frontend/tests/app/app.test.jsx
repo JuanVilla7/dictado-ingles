@@ -20,6 +20,10 @@ const LIBRARY = [
     cues: [[0.2, 3.2, 'What is a black hole?'], [3.7, 5.3, 'We asked a scientist.'], [7.9, 10.2, 'The name is a little misleading.'], [10.2, 12.9, 'Black holes are not actually holes.']] },
   { id: 'vid2', show: 'Charade', title: 'When Strangers Meet', cat: 'pelicula', level: 'B1', dur: 109,
     cues: [[0.9, 3.5, "It's hers. Where'd you find him?"], [3.6, 5.8, 'He was throwing snowballs at the baron.'], [5.9, 9, 'Is he still there now?'], [9.1, 12.5, 'Is your husband with you today?']] },
+  // Video con frases de pantalla (título, cartel y créditos): 2 habladas de 5
+  { id: 'vid3', show: 'NASA', title: 'How Big is Space?', cat: 'ciencia', level: 'B1', dur: 60,
+    cues: [[0.2, 3, 'How big is space?', 'screen'], [3.5, 5, 'We asked a scientist.', 'screen'], [5.2, 7.5, 'Space is really big.'],
+      [7.5, 10.8, 'It would take a long time.'], [11, 14, 'NASA production.', 'screen']] },
 ];
 
 function setup() {
@@ -115,6 +119,48 @@ describe('App (integración con puertos falsos)', () => {
       fireEvent.click(btn);
     }
     expect(s.games.correct).toBe(true);
+  });
+
+  it('frases de pantalla: empieza en la primera hablada y carga el video en 0 s', async () => {
+    fireEvent.click(screen.getAllByText('How Big is Space?')[0]);
+    await wait(10);
+    expect(s.practice.index).toBe(2);
+    expect(s.player.t).toBe(0);
+    expect(screen.getByText('1/2')).toBeTruthy();
+  });
+
+  it('frases de pantalla: el texto se muestra en gris y no se pide', async () => {
+    fireEvent.click(screen.getAllByText('How Big is Space?')[0]);
+    await wait(10);
+    s.player.t = 1;
+    await wait(250); // el reloj de la pantalla se actualiza cada 200 ms
+    expect(screen.getByText('📺 En pantalla: How big is space?')).toBeTruthy();
+    expect(s.practice.cue.text).toBe('Space is really big.');
+    expect(document.querySelector('.line').textContent.replace(/\s/g, '')).toBe('Spaceisreallybig.');
+  });
+
+  it('frases de pantalla: al terminar la última hablada el video queda terminado', async () => {
+    fireEvent.click(screen.getAllByText('How Big is Space?')[0]);
+    await wait(10);
+    typeText('spaceisreallybig');
+    await wait(500);
+    expect(screen.getByText('2/2')).toBeTruthy();
+    typeText('itwouldtakealongtime');
+    await wait(500);
+    expect(s.practice.finished).toBe(true);
+    expect(s.progress.get('vid3')).toBe(5);
+  });
+
+  it('la tarjeta cuenta solo las frases habladas', () => {
+    expect(screen.getByText('2 frases')).toBeTruthy();
+  });
+
+  it('progreso viejo apuntando a una frase de pantalla retoma en la próxima hablada', async () => {
+    s.progress.set('vid3', 1);
+    fireEvent.click(screen.getAllByText('How Big is Space?')[0]);
+    await wait(10);
+    expect(s.practice.index).toBe(2);
+    expect(s.player.t).toBe(0);
   });
 
   it('repaso de palabras con tarjetas', async () => {

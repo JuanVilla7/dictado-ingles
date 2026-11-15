@@ -38,7 +38,7 @@
 
 /**
  * @typedef {Object} LibraryRepository
- * @property {() => Promise<{id:string, show:string, title:string, cat:string, level:string, dur:number, cues:[number,number,string][]}[]>} getAll
+ * @property {() => Promise<{id:string, show:string, title:string, cat:string, level:string, dur:number, cues:[number,number,string,("screen")?][]}[]>} getAll
  */
 
 /**

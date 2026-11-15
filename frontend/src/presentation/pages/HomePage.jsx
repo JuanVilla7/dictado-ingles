@@ -14,7 +14,7 @@ export function HomePage({ library, onOpenVideo, onOpenOwn, onNavigate }) {
   const due = words.due().length;
   const hour = new Date().getHours();
   const hello = hour < 12 ? '¡Buen día!' : hour < 20 ? '¡Buenas tardes!' : '¡Buenas noches!';
-  const inProgress = library.filter((v) => { const p = progress.get(v.id); return p > 0 && p < v.cues.length; });
+  const inProgress = library.filter((v) => { const p = progress.summary(v); return p.done > 0 && !p.finished; });
 
   return (
     <section className="view">
@@ -32,7 +32,7 @@ export function HomePage({ library, onOpenVideo, onOpenOwn, onNavigate }) {
 
       {inProgress.length > 0 && <>
         <div className="sechead"><h2>▶ Seguir viendo</h2></div>
-        <div className="grid">{inProgress.map((v) => <VideoCard key={v.id} video={v} done={progress.get(v.id)} onClick={() => onOpenVideo(v)} />)}</div>
+        <div className="grid">{inProgress.map((v) => <VideoCard key={v.id} video={v} summary={progress.summary(v)} onClick={() => onOpenVideo(v)} />)}</div>
       </>}
 
       <div className="sechead">
@@ -43,7 +43,7 @@ export function HomePage({ library, onOpenVideo, onOpenOwn, onNavigate }) {
       </div>
       <div className="grid">
         {library.length === 0 && <p className="muted">Cargando videos…</p>}
-        {library.filter((v) => !cat || v.cat === cat).map((v) => <VideoCard key={v.id} video={v} done={progress.get(v.id)} onClick={() => onOpenVideo(v)} />)}
+        {library.filter((v) => !cat || v.cat === cat).map((v) => <VideoCard key={v.id} video={v} summary={progress.summary(v)} onClick={() => onOpenVideo(v)} />)}
       </div>
       <p className="credit">Escenas de <i>Charade</i> (1963) y videos de NASA, ambos de dominio público.</p>
 

@@ -1,7 +1,8 @@
 const fmtDur = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
 
-export function VideoCard({ video, done = 0, onClick }) {
-  const total = video.cues.length;
+/** `summary` = {done, total, finished}: viene de progress.summary(video) y cuenta solo frases habladas. */
+export function VideoCard({ video, summary, onClick }) {
+  const { done, total, finished } = summary;
   return (
     <button className="vcard" onClick={onClick}>
       <div className="vthumb" style={{ backgroundImage: `url(https://i.ytimg.com/vi/${video.id}/mqdefault.jpg)` }}>
@@ -15,7 +16,7 @@ export function VideoCard({ video, done = 0, onClick }) {
         <div className="tags">
           <span className="lvl">{video.level}</span>
           <span>{total} frases</span>
-          {done >= total ? <span>· ✔ terminado</span> : done > 0 ? <span>· vas por la {done + 1}</span> : null}
+          {finished ? <span>· ✔ terminado</span> : done > 0 ? <span>· vas por la {done + 1}</span> : null}
         </div>
       </div>
     </button>

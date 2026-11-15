@@ -35,11 +35,10 @@ export function App() {
 
   const openVideo = async (video) => {
     games.stop();
-    let start = progress.get(video.id);
-    if (start >= video.cues.length) start = 0;
-    practice.start({ cues: video.cues, startIndex: start, videoId: video.id, title: { show: video.show, title: video.title } });
+    // PracticeSession decide en qué frase hablada empezar y en qué segundo cargar el video
+    practice.start({ cues: video.cues, startIndex: progress.get(video.id), videoId: video.id, title: { show: video.show, title: video.title } });
     setView('practice');
-    try { await player.loadYouTube(video.id, Math.max(0, video.cues[start].start - 0.2)); player.setRate(settings.get().rate); }
+    try { await player.loadYouTube(video.id, practice.startTime); player.setRate(settings.get().rate); }
     catch { toast('⚠️ No se pudo cargar YouTube. Revisá tu conexión.'); navigate('home'); }
   };
 

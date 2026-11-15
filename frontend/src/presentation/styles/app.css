@@ -131,6 +131,8 @@
   .prev .word{padding:1px 2px}
   .prev .tbtn{border:none;background:none;padding:0 4px;font-size:15px;vertical-align:1px}
   .prevtr{text-align:center;color:var(--soft);font-size:14px;font-style:italic}
+  /* Texto que aparece en el video pero nadie dice: solo informativo, no se toca ni se traduce */
+  .screen-cue{text-align:center;color:var(--soft);font-size:15px;font-style:italic;min-height:26px;margin-top:16px;line-height:1.7}
   .word.tap{cursor:pointer;border-radius:6px;transition:background .12s}
   .word.tap:hover{background:var(--accent-soft)}
 
