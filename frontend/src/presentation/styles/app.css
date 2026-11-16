@@ -213,8 +213,17 @@
 
   @media (max-width:720px){
     .stats{grid-template-columns:repeat(2,1fr)}
-    .line{font-size:22px;gap:4px 12px}
+    .line{font-size:18px;gap:4px 12px;min-height:60px;padding:8px 4px}
     .pstats{gap:14px}
+    /* Celular: video más bajo y controles más compactos para que la frase y el teclado entren en pantalla */
+    .stage{max-width:100%}
+    #ytWrap{padding-top:35%}
+    .keys{display:none}
+    #typer{font-size:15px;padding:10px}
+    .prev{font-size:14px;margin-top:8px}
+    .actions button{font-size:12px;padding:6px 10px}
+    .pstat b{font-size:13px}
+    .ctrls button{min-width:36px;padding:5px 8px}
     .nav-in{padding:8px 12px;gap:8px}
     .brand span{display:none}
     .wrap{padding:14px 12px 50px}
